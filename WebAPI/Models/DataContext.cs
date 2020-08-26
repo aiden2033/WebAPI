@@ -14,7 +14,7 @@ namespace WebAPI.Models
         public DbSet<SubDivision> SubDivisions { get; set; }
         public DataContext()
         {
-            //Database.EnsureCreated();
+            Database.EnsureCreated();
         }
         protected override void OnConfiguring(DbContextOptionsBuilder builder)
         {

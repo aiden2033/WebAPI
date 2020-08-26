@@ -13,5 +13,7 @@ namespace WebAPI.Models
         public string Login { get; set; }
         [MinLength(8)]
         public string Password { get; set; }
+        public string Role { get; set; }
+        public string Token { get; set; }
     }
 }
