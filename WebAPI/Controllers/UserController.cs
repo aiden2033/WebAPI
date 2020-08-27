@@ -177,7 +177,7 @@ namespace WebAPI.Controllers
 
         [Authorize]
         [HttpGet("position")]
-        public async Task<ActionResult<Employee>> Read(Position position) //прочитать о должности
+        public async Task<ActionResult<Position>> Read(Position position) //прочитать о должности
         {
             #region Проверка входных данных
             if (position == null)
@@ -193,7 +193,7 @@ namespace WebAPI.Controllers
 
         [Authorize]
         [HttpGet("subdivision")]
-        public async Task<ActionResult<Employee>> Read(SubDivision subdivision) //прочитать о подразделении
+        public async Task<ActionResult<SubDivision>> Read(SubDivision subdivision) //прочитать о подразделении
         {
             #region Проверка входных данных
             if (subdivision == null)
@@ -209,7 +209,7 @@ namespace WebAPI.Controllers
 
         [Authorize]
         [HttpGet("user")]
-        public async Task<ActionResult<Employee>> Read(User user) //прочитать о пользователе
+        public async Task<ActionResult<User>> Read(User user) //прочитать о пользователе
         {
             #region Проверка входных данных
             if (user == null)
@@ -227,26 +227,126 @@ namespace WebAPI.Controllers
 
         #region UPDATE
 
-        //[Authorize]
-        //[HttpPost("employee")]
-        //public async Task<ActionResult<Employee>> UPDATE(Employee employee) //прочитать о сотруднике
-        //{
-        //    #region Проверка входных данных
-        //    if (employee == null)
-        //        return BadRequest("Ошибка чтения запроса");
-        //    Employee e = await db.Employees.FirstOrDefaultAsync(x =>
-        //                                                    (x.Surname == employee.Surname &&
-        //                                                    x.Name == employee.Name) ||
-        //                                                    (x.Id == employee.Id)); //ищем сотрудника
-        //    if (e == null)
-        //        return BadRequest("Сотрудник не найден. Попробуйте изменить запрос");
-        //    #endregion
-        //    return Ok(e);
-        //}
+        [Authorize]
+        [HttpPost("employee")]
+        public async Task<ActionResult<Employee>> Update(Employee employee) //изменить сотрудника
+        {
+            #region Проверка входных данных
+            if (employee == null)
+                return BadRequest("Ошибка чтения запроса");
+            Employee e = await db.Employees.FirstOrDefaultAsync(x => x.Id == employee.Id); //ищем сотрудника            
+            if (e == null)
+                return BadRequest("Сотрудник не найден. Попробуйте изменить запрос");
+            e.Surname = employee.Surname;
+            e.Name = employee.Name;
+            if (employee.MiddleName != null && e.MiddleName != employee.MiddleName) e.MiddleName = employee.MiddleName;
+            if (employee.Position != null && e.Position != employee.Position) e.Position = employee.Position;
+            if (employee.SubDivision != null && e.SubDivision != employee.SubDivision) e.SubDivision = employee.SubDivision;
+            if (employee.Birthday != null && e.Birthday != employee.Birthday) e.Birthday = employee.Birthday;
+            db.Employees.Update(e);
+            db.Employees.Include(s => s.SubDivision).Include(p => p.Position);
+            await db.SaveChangesAsync();
+            #endregion
+            return Ok(e);
+        }
+
+        [Authorize]
+        [HttpPost("position")]
+        public async Task<ActionResult<Position>> Update(Position position) // изменить должность
+        {
+            #region Проверка входных данных
+            if (position == null)
+                return BadRequest("Ошибка чтения запроса");
+            Position p = await db.Positions.FirstOrDefaultAsync(x => x.Id == position.Id);
+            if (p == null)
+                return BadRequest("Должность не найдена. Попробуйте изменить запрос");
+            if (position.Name != null && position.Name != "") p.Name = position.Name;
+            if (position.Employees != null) p.Employees.AddRange(position.Employees);
+            db.Positions.Update(p);
+            db.Positions.Include(e => e.Employees);
+            await db.SaveChangesAsync();
+            #endregion
+            return Ok(p);
+        }
+
+        [Authorize]
+        [HttpPost("subdivision")]
+        public async Task<ActionResult<SubDivision>> Update(SubDivision subdivision) //изменить подразделение
+        {
+            #region Проверка входных данных
+            if (subdivision == null)
+                return BadRequest("Ошибка чтения запроса");
+            SubDivision s = await db.SubDivisions.FirstOrDefaultAsync(x => x.Id == subdivision.Id);
+            if (s == null)
+                return BadRequest("Подразделение не найдено. Попробуйте изменить запрос");
+            if (subdivision.Name != null && subdivision.Name != "") s.Name = subdivision.Name;
+            if (subdivision.ParentId != s.ParentId) s.ParentId = subdivision.ParentId;
+            if (subdivision.Employees != null) s.Employees.AddRange(subdivision.Employees);
+            db.SubDivisions.Update(s);
+            db.SubDivisions.Include(e => e.Employees);
+            await db.SaveChangesAsync();
+            #endregion
+            return Ok(s);
+        }
+
         #endregion
 
 
         #region DELETE
+
+        [Authorize]
+        [HttpDelete("employee")]
+        public async Task<ActionResult<Employee>> Delete(int? id) //удалить сотрудника
+        {
+            #region Проверка входных данных
+            if (id == null)
+                return BadRequest("Ошибка чтения запроса");
+            Employee e = await db.Employees.FirstOrDefaultAsync(x => x.Id == id); //ищем сотрудника
+            #endregion            
+            if (e != null)
+            {
+                db.Employees.Remove(e);
+                await db.SaveChangesAsync();
+                return Ok("Данные о сотруднике успешно удалены");
+            }
+            return BadRequest("Не удалось выполнить удаление");
+        }
+
+        [Authorize]
+        [HttpDelete("position")]
+        public async Task<ActionResult<Position>> DeletePosition(int? id) //удалить должность
+        {
+            #region Проверка входных данных
+            if (id == null)
+                return BadRequest("Ошибка чтения запроса");
+            Position p = await db.Positions.FirstOrDefaultAsync(x => x.Id == id);
+            #endregion
+            if (p != null)
+            {
+                db.Positions.Remove(p);
+                await db.SaveChangesAsync();
+                return Ok("Данные о должности успешно удалены");
+            }
+            return BadRequest("Неудалось выполнить удаление");
+        }
+
+        [Authorize]
+        [HttpDelete("subdivision")]
+        public async Task<ActionResult<SubDivision>> DeleteSubDiv(int? id) //удалить данные о подразделении
+        {
+            #region Проверка входных данных
+            if (id == null)
+                return BadRequest("Ошибка чтения запроса");
+            SubDivision s = await db.SubDivisions.FirstOrDefaultAsync(x => x.Id == id);
+            #endregion
+            if (s != null)
+            {
+                db.SubDivisions.Remove(s);
+                await db.SaveChangesAsync();
+                return Ok("Данные о подразделении успешно удалены");
+            }
+            return BadRequest("Не удалось выполнить удаление");
+        }
         #endregion
 
     }
