@@ -113,20 +113,20 @@ namespace WebAPI.Controllers
             #endregion
             await db.Employees.AddAsync(employee);
             db.Employees.Include(x => x.Position).
-                         Include(x => x.SubDivision);
+                         Include(x => x.SubDivision); //связываем с другими таблицам 
             await db.SaveChangesAsync();
             return Ok(employee);
         }
         [Authorize]
         [HttpPut("position")]
-        public async Task<ActionResult<Position>> Create(Position position) //создать запись о новой должности
+        public async Task<ActionResult<Position>> Create(Position position) //создать запись о должности
         {
             #region Проверка входных данных
             if (position == null)
                 return BadRequest("Невозможно добавить должность с пустыми значениями");
             if (!CheckEntireData(position.Name))
                 return BadRequest("Получены некоректные данные");
-            bool result = await db.Positions.ContainsAsync(position); //проверка
+            bool result = await db.Positions.AnyAsync(x => x.Name == position.Name); //проверка
             if (result)
                 return BadRequest("Запись о данной должности уже внесена");
             #endregion
@@ -144,7 +144,7 @@ namespace WebAPI.Controllers
                 return BadRequest("Невозможно добавить подразделение с пустыми значениями");
             if (!CheckEntireData(subDivision.Name))
                 return BadRequest("Получены некоректные данные");
-            bool result = await db.SubDivisions.ContainsAsync(subDivision); //проверяем, нет ли такого пользователя
+            bool result = await db.SubDivisions.AnyAsync(x => x.Name == subDivision.Name && x.ParentId == subDivision.ParentId); //проверяем, нет ли такого пользователя
             if (result)
                 return BadRequest("Запись о данном подразделении уже внесена");
             #endregion
