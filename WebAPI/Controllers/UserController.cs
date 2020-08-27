@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.Eventing.Reader;
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Net;
 using System.Security.Claims;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -25,15 +27,15 @@ namespace WebAPI.Controllers
         }
 
         [HttpPut("register")]
-        public async Task<ActionResult<User>> Register(User user) //регистрация юзера
+        public async Task<ActionResult<User>> Register(User user) //регистрация пользователя
         {
             if (user == null)
-                return BadRequest();
-            bool res = await db.Users.AnyAsync(x => x.Login == user.Login); //нет ли пользователя с таким логином
-            if (res)
+                return BadRequest("Невозможно зарегестрировать пустого пользователя");
+            bool result = await db.Users.AnyAsync(x => x.Login == user.Login); //нет ли пользователя с таким логином
+            if (result)
                 return BadRequest();
             user.Role = "admin"; //только одна роль возможна
-            db.Users.Add(user);
+            await db.Users.AddAsync(user);
             await db.SaveChangesAsync();
             await Token(user);
             return Ok(user);
@@ -47,6 +49,7 @@ namespace WebAPI.Controllers
             var encodedJwt = CreateJWT(Identity); // создаем сам токен
             user.Token = encodedJwt;
             user.Login = Identity.Name;
+            user.Role = "admin"; //только одна роль возможна
             db.Users.Update(user);
             await db.SaveChangesAsync();
             return Ok(user);
@@ -78,24 +81,78 @@ namespace WebAPI.Controllers
             return new JwtSecurityTokenHandler().WriteToken(Jwt); //получаем в виде строки токен
         }
 
-        #region CREATE
-        [HttpPut("employee")]
-        public Task<ActionResult<Employee>> Create(Employee employee) //создать запись о сотруднике
+        private bool CheckEntireData(params string[] s) //проверка на некорректные символы в значениях
         {
-
-            return null;
+            Regex r = new Regex(@"[\d!#h№;%:?*()-_=+@#$%^&*|.,><']");
+            Match m;
+            for (int i = 0; i < s.Length; i++)
+            {
+                if (s[i] == null || s[i] == "") return false;
+                m = r.Match(s[i]);
+                if (m.Success)
+                    return false;
+            }
+            return true;
         }
 
-        //[Required]
-        //public string Surname { get; set; }
-        //[Required]
-        //public string Name { get; set; }
-        //public string MiddleName { get; set; }
-        //public DateTime Birthday { get; set; }
-        //[Required]
-        //public SubDivision SubDivision { get; set; } //подразделение 
-        //[Required]
-        //public Position Position { get; set; } //должность
+        #region CREATE
+        [Authorize]
+        [HttpPut("employee")]
+        public async Task<ActionResult<Employee>> Create(Employee employee) //создать запись о сотруднике
+        {
+            #region Проверка входных данных
+            if (employee == null)
+                return BadRequest("Ошибка добавления пустого значения");
+            if (!CheckEntireData(employee.Name, employee.Surname))
+                return BadRequest("Получены некоректные данные");
+            bool result = await db.Employees.AnyAsync(x => x.Surname == employee.Surname &&
+                                                           x.Name == employee.Name &&
+                                                           x.Birthday == employee.Birthday); //проверяем, нет ли такого пользователя
+            if (result)
+                return BadRequest("Запись о данном сотруднике уже присутствует");
+            #endregion
+            await db.Employees.AddAsync(employee);
+            db.Employees.Include(x => x.Position).
+                         Include(x => x.SubDivision);
+            await db.SaveChangesAsync();
+            return Ok(employee);
+        }
+        [Authorize]
+        [HttpPut("position")]
+        public async Task<ActionResult<Position>> Create(Position position) //создать запись о новой должности
+        {
+            #region Проверка входных данных
+            if (position == null)
+                return BadRequest("Невозможно добавить должность с пустыми значениями");
+            if (!CheckEntireData(position.Name))
+                return BadRequest("Получены некоректные данные");
+            bool result = await db.Positions.ContainsAsync(position); //проверка
+            if (result)
+                return BadRequest("Запись о данной должности уже внесена");
+            #endregion
+
+            await db.Positions.AddAsync(position);
+            await db.SaveChangesAsync();
+            return Ok(position);
+        }
+        [Authorize]
+        [HttpPut("subdivision")]
+        public async Task<ActionResult<SubDivision>> Create(SubDivision subDivision) //создать запись о подразделении
+        {
+            #region Проверка входных данных
+            if (subDivision == null)
+                return BadRequest("Невозможно добавить подразделение с пустыми значениями");
+            if (!CheckEntireData(subDivision.Name))
+                return BadRequest("Получены некоректные данные");
+            bool result = await db.SubDivisions.ContainsAsync(subDivision); //проверяем, нет ли такого пользователя
+            if (result)
+                return BadRequest("Запись о данном подразделении уже внесена");
+            #endregion
+            await db.SubDivisions.AddAsync(subDivision);
+            await db.SaveChangesAsync();
+            return Ok(subDivision);
+        }
+
 
         #endregion
         #region READ
@@ -105,27 +162,6 @@ namespace WebAPI.Controllers
         #region DELETE
         #endregion
 
-        //GET PUT POST DELETE     
-        [HttpGet]
-        public Task<ActionResult<User>> Get()
-        {
-            return null;
-        }
-        [HttpPut]
-        public Task<ActionResult<User>> Put(User user)
-        {
-            return null;
-        }
-        [HttpPost]
-        public Task<ActionResult<User>> Post(User user)
-        {
-            return null;
-        }
-        [HttpDelete]
-        public Task<ActionResult<User>> Delete(User user)
-        {
-            return null;
-        }
     }
 
 
