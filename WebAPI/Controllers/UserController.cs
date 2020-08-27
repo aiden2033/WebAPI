@@ -155,10 +155,97 @@ namespace WebAPI.Controllers
 
 
         #endregion
+
+
         #region READ
+        [Authorize]
+        [HttpGet("employee")]
+        public async Task<ActionResult<Employee>> Read(Employee employee) //прочитать о сотруднике
+        {
+            #region Проверка входных данных
+            if (employee == null)
+                return BadRequest("Ошибка чтения запроса");
+            Employee e = await db.Employees.FirstOrDefaultAsync(x =>
+                                                            (x.Surname == employee.Surname &&
+                                                            x.Name == employee.Name) ||
+                                                            (x.Id == employee.Id)); //ищем сотрудника
+            if (e == null)
+                return BadRequest("Сотрудник не найден. Попробуйте изменить запрос");
+            #endregion
+            return Ok(e);
+        }
+
+        [Authorize]
+        [HttpGet("position")]
+        public async Task<ActionResult<Employee>> Read(Position position) //прочитать о должности
+        {
+            #region Проверка входных данных
+            if (position == null)
+                return BadRequest("Ошибка чтения запроса");
+            Position pos = await db.Positions.FirstOrDefaultAsync(x =>
+                                                                        x.Name.ToLower() == position.Name.ToLower() ||
+                                                                        x.Id == position.Id);//ищем должность
+            if (pos == null)
+                return BadRequest("Информация о должности не найдена. Попробуйте изменить запрос"); // !!!!!!!
+            #endregion
+            return Ok(pos);
+        }
+
+        [Authorize]
+        [HttpGet("subdivision")]
+        public async Task<ActionResult<Employee>> Read(SubDivision subdivision) //прочитать о подразделении
+        {
+            #region Проверка входных данных
+            if (subdivision == null)
+                return BadRequest("Ошибка чтения запроса");
+            SubDivision sub = await db.SubDivisions.FirstOrDefaultAsync(x =>
+                                                                            x.Id == subdivision.Id ||
+                                                                            x.Name.ToLower() == subdivision.Name.ToLower()); //ищем подразделение
+            if (sub == null)
+                return BadRequest("Информация о подразделении не найдена. Попробуйте изменить запрос"); //!!!!!!!!!!!!
+            #endregion
+            return Ok(sub);
+        }
+
+        [Authorize]
+        [HttpGet("user")]
+        public async Task<ActionResult<Employee>> Read(User user) //прочитать о пользователе
+        {
+            #region Проверка входных данных
+            if (user == null)
+                return BadRequest("Ошибка чтения запроса");
+            User u = await db.Users.FirstOrDefaultAsync(x =>
+                                                                x.Id == user.Id ||
+                                                                x.Login == user.Login); //ищем пользователя
+            if (u == null)
+                return BadRequest("Пользователь не найден. Попробуйте изменить запрос");
+            #endregion
+            return Ok(u);
+        }
         #endregion
+
+
         #region UPDATE
+
+        //[Authorize]
+        //[HttpPost("employee")]
+        //public async Task<ActionResult<Employee>> UPDATE(Employee employee) //прочитать о сотруднике
+        //{
+        //    #region Проверка входных данных
+        //    if (employee == null)
+        //        return BadRequest("Ошибка чтения запроса");
+        //    Employee e = await db.Employees.FirstOrDefaultAsync(x =>
+        //                                                    (x.Surname == employee.Surname &&
+        //                                                    x.Name == employee.Name) ||
+        //                                                    (x.Id == employee.Id)); //ищем сотрудника
+        //    if (e == null)
+        //        return BadRequest("Сотрудник не найден. Попробуйте изменить запрос");
+        //    #endregion
+        //    return Ok(e);
+        //}
         #endregion
+
+
         #region DELETE
         #endregion
 
