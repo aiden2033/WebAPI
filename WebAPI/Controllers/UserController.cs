@@ -29,8 +29,6 @@ namespace WebAPI.Controllers
             long? l = Request?.ContentLength;
         }
 
-
-
         [HttpPost("token")]
         public async Task<ActionResult<User>> Token(User user) //запросить токен
         {
@@ -186,7 +184,8 @@ namespace WebAPI.Controllers
             if (position == null)
                 return BadRequest("Ошибка чтения запроса");
             Position pos = await db.Positions.FirstOrDefaultAsync(x => x.Id == position.Id ||
-                                                                 (position.Name != null && x.Name.ToLower() == position.Name.ToLower()));//ищем должность
+                                                                 (position.Name != null &&
+                                                                 x.Name.ToLower() == position.Name.ToLower()));//ищем должность
             if (pos == null)
                 return BadRequest("Информация о должности не найдена. Попробуйте изменить запрос"); // !!!!!!!
             #endregion
@@ -195,17 +194,16 @@ namespace WebAPI.Controllers
 
         [Authorize]
         [HttpGet("subdivision")]
+        [SubDivisionFilter]
         public async Task<ActionResult<SubDivision>> Read(SubDivision subdivision) //прочитать о подразделении
         {
-            #region Проверка входных данных
-            if (subdivision == null)
-                return BadRequest("Ошибка чтения запроса");
+            if (Response.StatusCode == 400)
+                return BadRequest("Не удалось обработать данный запрос.");
             SubDivision sub = await db.SubDivisions.FirstOrDefaultAsync(x =>
                                                                             x.Id == subdivision.Id ||
-                                                                            (subdivision.Name != null && x.Name.ToLower() == subdivision.Name.ToLower())); //ищем подразделение
+                                                                           (subdivision.Name != null && x.Name.ToLower() == subdivision.Name.ToLower())); //ищем подразделение
             if (sub == null)
-                return BadRequest("Информация о подразделении не найдена. Попробуйте изменить запрос"); //!!!!!!!!!!!!
-            #endregion
+                return BadRequest("Информация о подразделении не найдена. Попробуйте изменить запрос");
             return Ok(sub);
         }
 

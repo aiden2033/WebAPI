@@ -29,9 +29,9 @@ namespace WebAPI.Filters
                     Name = "Руководящий отдел",
                     ParentId = 0
                 };
+                res.Value = e;
+                context.Result = res;
             }
-            res.Value = e;
-            context.Result = res;
         }
     }
 }
