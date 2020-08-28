@@ -13,6 +13,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.Net.Http.Headers;
 using WebAPI.Models;
+using WebAPI.Filters;
+using Microsoft.AspNetCore.Http;
 
 namespace WebAPI.Controllers
 {
@@ -162,18 +164,17 @@ namespace WebAPI.Controllers
         #region READ
         [Authorize]
         [HttpGet("employee")]
+        [EmployeeFilter]
         public async Task<ActionResult<Employee>> Read(Employee employee) //прочитать о сотруднике
         {
-            #region Проверка входных данных
-            if (employee == null && employee.Name != null && employee.Surname != null)
-                return BadRequest("Ошибка чтения запроса");
+            if (Response.StatusCode == 400)
+                return BadRequest("Не удалось обработать данный запрос.");
             Employee e = await db.Employees.FirstOrDefaultAsync(x =>
                                                             (x.Surname == employee.Surname &&
                                                             x.Name == employee.Name) ||
                                                             (x.Id == employee.Id)); //ищем сотрудника
             if (e == null)
-                return BadRequest("Сотрудник не найден. Попробуйте изменить запрос");
-            #endregion
+                return BadRequest("Сотрудник не найден. Попробуйте изменить запрос.");
             return Ok(e);
         }
 
