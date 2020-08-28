@@ -350,26 +350,4 @@ namespace WebAPI.Controllers
         #endregion
 
     }
-
-
-    //#region TEST CONTROLLER
-    //[ApiController]
-    //[Route("api/[controller]")]
-    //public class ValuesController : ControllerBase
-    //{
-    //    [Authorize]
-    //    [Route("getlogin")]
-    //    public IActionResult GetLogin()
-    //    {
-    //        return Ok($"Ваш логин: {User.Identity.Name}");
-    //    }
-
-    //    [Authorize(Roles = "admin")]
-    //    [Route("getrole")]
-    //    public IActionResult GetRole()
-    //    {
-    //        return Ok("Ваша роль: admin");
-    //    }
-    //}
-    //#endregion
 }
