@@ -24,22 +24,10 @@ namespace WebAPI.Controllers
         public UserController(DataContext context)
         {
             db = context;
+            long? l = Request?.ContentLength;
         }
 
-        [HttpPut("register")]
-        public async Task<ActionResult<User>> Register(User user) //регистрация пользователя
-        {
-            if (user == null)
-                return BadRequest("Невозможно зарегестрировать пустого пользователя");
-            bool result = await db.Users.AnyAsync(x => x.Login == user.Login); //нет ли пользователя с таким логином
-            if (result)
-                return BadRequest();
-            user.Role = "admin"; //только одна роль возможна
-            await db.Users.AddAsync(user);
-            await db.SaveChangesAsync();
-            await Token(user);
-            return Ok(user);
-        }
+
 
         [HttpPost("token")]
         public async Task<ActionResult<User>> Token(User user) //запросить токен
@@ -153,6 +141,20 @@ namespace WebAPI.Controllers
             return Ok(subDivision);
         }
 
+        [HttpPut("register")]
+        public async Task<ActionResult<User>> Register(User user) //регистрация пользователя
+        {
+            if (user == null)
+                return BadRequest("Невозможно зарегестрировать пустого пользователя");
+            bool result = await db.Users.AnyAsync(x => x.Login == user.Login); //нет ли пользователя с таким логином
+            if (result)
+                return BadRequest();
+            user.Role = "admin"; //только одна роль возможна
+            await db.Users.AddAsync(user);
+            await db.SaveChangesAsync();
+            await Token(user);
+            return Ok(user);
+        }
 
         #endregion
 
@@ -163,7 +165,7 @@ namespace WebAPI.Controllers
         public async Task<ActionResult<Employee>> Read(Employee employee) //прочитать о сотруднике
         {
             #region Проверка входных данных
-            if (employee == null)
+            if (employee == null && employee.Name != null && employee.Surname != null)
                 return BadRequest("Ошибка чтения запроса");
             Employee e = await db.Employees.FirstOrDefaultAsync(x =>
                                                             (x.Surname == employee.Surname &&
@@ -182,9 +184,8 @@ namespace WebAPI.Controllers
             #region Проверка входных данных
             if (position == null)
                 return BadRequest("Ошибка чтения запроса");
-            Position pos = await db.Positions.FirstOrDefaultAsync(x =>
-                                                                        x.Name.ToLower() == position.Name.ToLower() ||
-                                                                        x.Id == position.Id);//ищем должность
+            Position pos = await db.Positions.FirstOrDefaultAsync(x => x.Id == position.Id ||
+                                                                 (position.Name != null && x.Name.ToLower() == position.Name.ToLower()));//ищем должность
             if (pos == null)
                 return BadRequest("Информация о должности не найдена. Попробуйте изменить запрос"); // !!!!!!!
             #endregion
@@ -200,7 +201,7 @@ namespace WebAPI.Controllers
                 return BadRequest("Ошибка чтения запроса");
             SubDivision sub = await db.SubDivisions.FirstOrDefaultAsync(x =>
                                                                             x.Id == subdivision.Id ||
-                                                                            x.Name.ToLower() == subdivision.Name.ToLower()); //ищем подразделение
+                                                                            (subdivision.Name != null && x.Name.ToLower() == subdivision.Name.ToLower())); //ищем подразделение
             if (sub == null)
                 return BadRequest("Информация о подразделении не найдена. Попробуйте изменить запрос"); //!!!!!!!!!!!!
             #endregion
@@ -216,7 +217,7 @@ namespace WebAPI.Controllers
                 return BadRequest("Ошибка чтения запроса");
             User u = await db.Users.FirstOrDefaultAsync(x =>
                                                                 x.Id == user.Id ||
-                                                                x.Login == user.Login); //ищем пользователя
+                                                                (user.Login != null && x.Login == user.Login)); //ищем пользователя
             if (u == null)
                 return BadRequest("Пользователь не найден. Попробуйте изменить запрос");
             #endregion
@@ -295,8 +296,8 @@ namespace WebAPI.Controllers
         #region DELETE
 
         [Authorize]
-        [HttpDelete("employee")]
-        public async Task<ActionResult<Employee>> Delete(int? id) //удалить сотрудника
+        [HttpDelete("employee/{id}")]
+        public async Task<ActionResult<Employee>> Delete(uint? id) //удалить сотрудника
         {
             #region Проверка входных данных
             if (id == null)
@@ -307,14 +308,14 @@ namespace WebAPI.Controllers
             {
                 db.Employees.Remove(e);
                 await db.SaveChangesAsync();
-                return Ok("Данные о сотруднике успешно удалены");
+                return Ok(@"Данные о сотруднике: { " + e.Surname + " " + e.Name + " } успешно удалены");
             }
-            return BadRequest("Не удалось выполнить удаление");
+            return BadRequest("Не удалось выполнить удаление. Сотрудник с данным идентификатором не найден.");
         }
 
         [Authorize]
-        [HttpDelete("position")]
-        public async Task<ActionResult<Position>> DeletePosition(int? id) //удалить должность
+        [HttpDelete("position/{id}")]
+        public async Task<ActionResult<Position>> DeletePosition(uint? id) //удалить должность
         {
             #region Проверка входных данных
             if (id == null)
@@ -325,14 +326,14 @@ namespace WebAPI.Controllers
             {
                 db.Positions.Remove(p);
                 await db.SaveChangesAsync();
-                return Ok("Данные о должности успешно удалены");
+                return Ok("Данные о должности { " + p.Name + " } успешно удалены");
             }
-            return BadRequest("Неудалось выполнить удаление");
+            return BadRequest("Неудалось выполнить удаление. Должность не найдена");
         }
 
         [Authorize]
-        [HttpDelete("subdivision")]
-        public async Task<ActionResult<SubDivision>> DeleteSubDiv(int? id) //удалить данные о подразделении
+        [HttpDelete("subdivision/{id}")]
+        public async Task<ActionResult<SubDivision>> DeleteSubDiv(uint? id) //удалить данные о подразделении
         {
             #region Проверка входных данных
             if (id == null)
@@ -343,9 +344,9 @@ namespace WebAPI.Controllers
             {
                 db.SubDivisions.Remove(s);
                 await db.SaveChangesAsync();
-                return Ok("Данные о подразделении успешно удалены");
+                return Ok("Данные о подразделении { " + s.Name + " } успешно удалены");
             }
-            return BadRequest("Не удалось выполнить удаление");
+            return BadRequest("Не удалось выполнить удаление. Подразделение не найдено.");
         }
         #endregion
 
